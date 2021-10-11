@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "../../../../../development/own_development/temp/cpp"
+		},
+		{
+			"name": "esp1_blink",
+			"path": ".."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"algorithm": "cpp",
+			"random": "cpp"
+		}
+	}
+}

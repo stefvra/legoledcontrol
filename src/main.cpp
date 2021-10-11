@@ -4,19 +4,31 @@
 #include "controller.h"
 #include "credstore.h"
 #include "secrets.h"
-//#include <ESP8266WebServer.h>
+#include <ESP8266WebServer.h> // use this lib!!
+//#include <ESP8266mDNS.h>
+#include <uri/UriBraces.h>
 
-
+// config for STA mode
 const char *ssid = SSID;     // your ssid defined in secrets.h
 const char *password = PWD; // your password defined in secrets.h
 
+// config for AP mode
+#define AP_SSID "ESP8266"
+#define AP_PASS "magicword"
+IPAddress local_IP(192,168,4,22);
+IPAddress gateway(192,168,4,9);
+IPAddress subnet(255,255,255,0);
+
+
 Driver led_driver = Driver();
 CredStore store = CredStore();
-Controller led_controller = Controller(&led_driver, &store);
+//Controller led_controller = Controller(&led_driver, &store);
 String serial_buffer;
 
+//MDNSResponder mdns;
 
-//ESP8266WebServer server(80);
+
+ESP8266WebServer server(80);
 
  
 void setup()
@@ -26,6 +38,9 @@ void setup()
     Serial.begin(9600);
 
     WiFi.begin(ssid, password);
+    //WiFi.softAPConfig(local_IP, gateway, subnet);
+    WiFi.softAP(AP_SSID, AP_PASS);
+
 
     delay(10);
 
@@ -47,24 +62,56 @@ void setup()
     Serial.print(WiFi.localIP());
     Serial.println("/");
 
-    led_controller.init();
+
+    Serial.print("AP Server IP address: ");
+    Serial.println(WiFi.softAPIP());
+
+
+    //led_controller.init();
     led_driver.init();
 
-    Serial.print("pwd: ");
-    Serial.println(store.get_pwd());
-    Serial.print("ssid: ");
-    Serial.println(store.get_ssid());
+    server.on(F("/"), []() {
+        server.send(200, "text/plain", "hello from esp8266!");
+    });
 
-    Serial.println("setting credentials...");
+    server.on(UriBraces("/led/enable/{}"), []() {
+        int index = server.pathArg(0).toInt();
+        led_driver.activate_output(index);
+        server.send(200, "text/plain", "LED activated");
+    });
 
-    store.set_pwd("paswoord");
-    store.set_ssid("netwerknaam");
+    server.on(UriBraces("/led/disable/{}"), []() {
+        int index = server.pathArg(0).toInt();
+        led_driver.deactivate_output(index);
+        server.send(200, "text/plain", "LED deactivated");
+    });
+
+    server.on("/store/get_ssid", []() {
+        server.send(200, "text/plain", store.get_ssid());
+    });
+
+    server.on("/store/get_pwd", []() {
+        server.send(200, "text/plain", store.get_pwd());
+    });
+
+    server.on(UriBraces("/store/set_pwd/{}"), []() {
+        String pwd = server.pathArg(0);
+        store.set_pwd(pwd);
+        server.send(200, "text/plain", "pwd set");
+    });
+
+    server.on(UriBraces("/store/set_ssid/{}"), []() {
+        String ssid = server.pathArg(0);
+        store.set_ssid(ssid);
+        server.send(200, "text/plain", "ssid set");
+    });
+
+    server.on("/wifi/get_sta_ip", []() {
+        server.send(200, "text/plain", WiFi.localIP().toString());
+    });
 
 
-    Serial.print("pwd: ");
-    Serial.println(store.get_pwd());
-    Serial.print("ssid: ");
-    Serial.println(store.get_ssid());
+    server.begin();
 
 
 }
@@ -73,8 +120,8 @@ void loop()
 {
     // put your main code here, to run repeatedly:
 
-    led_controller.run();
-    serial_buffer = Serial.readStringUntil('\n');
-    Serial.println("echo: " + serial_buffer);
+    //led_controller.run();
+    server.handleClient();
+
     delay(500);
 }

@@ -8,10 +8,6 @@
 //#include <ESP8266mDNS.h>
 #include <uri/UriBraces.h>
 
-// config for STA mode
-const char *ssid = SSID;     // your ssid defined in secrets.h
-const char *password = PWD; // your password defined in secrets.h
-
 // config for AP mode
 #define AP_SSID "ESP8266"
 #define AP_PASS "magicword"
@@ -25,7 +21,12 @@ CredStore store = CredStore();
 //Controller led_controller = Controller(&led_driver, &store);
 String serial_buffer;
 
-//MDNSResponder mdns;
+
+// config for STA mode
+String ssid = store.get_ssid();     // your ssid defined in secrets.h
+String password = store.get_pwd(); // your password defined in secrets.h
+
+
 
 
 ESP8266WebServer server(80);
@@ -33,15 +34,20 @@ ESP8266WebServer server(80);
  
 void setup()
 {
-    // put your setup code here, to run once:
+    // open serial communication
 
     Serial.begin(9600);
 
-    WiFi.begin(ssid, password);
-    //WiFi.softAPConfig(local_IP, gateway, subnet);
+    // setup access point
     WiFi.softAP(AP_SSID, AP_PASS);
+    Serial.print("AP Server IP address: ");
+    Serial.println(WiFi.softAPIP());
+    //WiFi.softAPConfig(local_IP, gateway, subnet);
 
 
+    // connect to Wifi network
+    WiFi.begin(ssid, password);
+    
     delay(10);
 
     Serial.println();
@@ -63,10 +69,7 @@ void setup()
     Serial.println("/");
 
 
-    Serial.print("AP Server IP address: ");
-    Serial.println(WiFi.softAPIP());
-
-
+    
     //led_controller.init();
     led_driver.init();
 
